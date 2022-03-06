@@ -1,0 +1,3 @@
+[submodule "TuiConsole"]
+	path = TuiConsole
+	url = git@github.com:ASU-Astronomical-Instrumentation/TuiConsole.git
