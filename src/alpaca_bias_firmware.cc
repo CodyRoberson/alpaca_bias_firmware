@@ -54,9 +54,9 @@ void loop(){
     while (Serial.available() > 0) 
         Serial.read();
     
-    Serial.println("(built: " + String(__DATE__) + "_" + String(__TIME__) + " )");
-    Serial.println("Select Option:\n1. Read Voltage(V),Current(mA)\n2. Set Wiper\n3. Set Current");
-    int cmd = cons->getInt("option: ");
+    Serial.println("(built: " + String(__DATE__) + "_" + String(__TIME__) + " )\r");
+    Serial.println("Select Option:\r\n1. Read Voltage(V),Current(mA)\r\n2. Set Wiper\r\n3. Set Current");
+    int cmd = cons->getInt("\r\noption: ");
     int wiper = 0, wiperval = 0;
     float cur; //desired current
 
@@ -68,7 +68,7 @@ void loop(){
     case 2: // set resistance on POT
         wiper = (uint8_t) cons->getInt("wiper (1-4): ");
         if (wiper < 1 || wiper > 4){
-            Serial.println("Invalid Wiper pick 1 - 4");
+            Serial.println("Invalid Wiper pick 1 - 4\r\n");
             return;
         }
         wiperval = (uint8_t) cons->getInt("Value (0-255): ");
@@ -87,15 +87,16 @@ void loop(){
          */
         cur = (float) cons->getDouble("current (mA): ");
         setWiper(DEFAULT_POT_WIPER, 0); //START AT MIN VAL
-
+        Serial.println("\r\n");
         for (int i = 0; i < 256; i++){
+            Serial.println("Trying wiper("+String(DEFAULT_POT_WIPER)+")=" + String(i) + "\r");
             float x = 0;
             setWiper(DEFAULT_POT_WIPER, i);
             x = getCurrent();
 
             if (abs(cur-x) <= MIN_TOLERANCE)
             {
-                Serial.println("found setting, wiper=" + String(i));
+                Serial.println("\r\nfound setting, measured=" + String(abs(cur-x)) +  " wiper=" + String(i) + "\r\n");
                 break;
             }
             
@@ -111,7 +112,7 @@ void loop(){
         
         break;
     default:
-        Serial.println("Invalud CMD");
+        Serial.println("\r\n");
         break;
     }
 
@@ -127,7 +128,7 @@ void setWiper(uint8_t wiper, uint8_t val){
     
     status = Wire.endTransmission();
     if(status != 0)
-        Serial.println("Error, couldn't communicate with AD5144 chip over i2c status=" + String(status));
+        Serial.println("\r\nError, couldn't communicate with AD5144 chip over i2c status=" + String(status) + "\r\n");
     
 }
 
@@ -150,5 +151,5 @@ float getLoadV(){
 
 // Print voltage,current in volts,miliAmp\n format
 void printCV(){
-    Serial.println(String(getLoadV()) + "," + String(getCurrent()));
+    Serial.println("\r\n" + String(getLoadV()) + "," + String(getCurrent()) + "\r\n");
 }
