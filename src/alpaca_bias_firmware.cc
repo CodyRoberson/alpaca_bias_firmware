@@ -51,6 +51,9 @@ void setup(){
 }
 
 void loop(){
+    while (Serial.available() > 0) 
+        Serial.read();
+    
     Serial.println("(built: " + String(__DATE__) + "_" + String(__TIME__) + " )");
     Serial.println("Select Option:\n1. Read Voltage(V),Current(mA)\n2. Set Wiper\n3. Set Current");
     int cmd = cons->getInt("option: ");
@@ -98,12 +101,9 @@ void loop(){
             
             delay(250);
             //break out of this thing and return to menu if anything is sent over serial
-            while (Serial.available() > 0) 
-            {
-                Serial.read();
-                return; 
-            }
-            
+            if(Serial.available() > 0)
+                return;
+        
             
         }
 
