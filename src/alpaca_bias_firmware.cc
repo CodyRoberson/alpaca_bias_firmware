@@ -28,9 +28,12 @@ TuiConsole *cons;
 #define AD5144_I2C_ADDR 0b0101111 //ADDR 0 -> GND   ADDR 1 -> GND (AAD5144 DATASHEET)
 #define AD5144_CMD_WRITE_RDAC 0b00010000 //offset +1 for each RDAC register
 #define DEFAULT_POT_WIPER 1
-#define MIN_TOLERANCE 10.0 //minimum acceptable difference between desired and realized bias current
 
-void setWiper(uint8_t wiper, uint8_t val);
+#define MIN_CURR_TOLERANCE 10.0 //minimum acceptable difference between desired and realized bias current
+#define MIN_VOLT_TOLERANCE 10.0 //minimum acceptable difference between desired and realized bias current
+
+
+int setWiper(uint8_t wiper, uint8_t val);
 void printCV();
 float getLoadV();
 float getCurrent();
@@ -55,10 +58,10 @@ void loop(){
         Serial.read();
     
     Serial.println("(built: " + String(__DATE__) + "_" + String(__TIME__) + " )\r");
-    Serial.println("Select Option:\r\n1. Read Voltage(V),Current(mA)\r\n2. Set Wiper\r\n3. Set Current");
+    Serial.println("Select Option:\r\n1. Read Voltage(V),Current(mA)\r\n2. Set Wiper\r\n3. Set Current\r\n4. Set Voltage");
     int cmd = cons->getInt("\r\noption: ");
-    int wiper = 0, wiperval = 0;
-    float cur; //desired current
+    int wiper = 0, wiperval = 0, status = -1;
+    float cur = 0, vol = 0; //desired current
 
     switch (cmd)
     {
@@ -91,13 +94,14 @@ void loop(){
         for (int i = 0; i < 256; i++){
             Serial.println("Trying wiper("+String(DEFAULT_POT_WIPER)+")=" + String(i) + "\r");
             float x = 0;
-            setWiper(DEFAULT_POT_WIPER, i);
+            status = setWiper(DEFAULT_POT_WIPER, i);
             x = getCurrent();
 
-            if (abs(cur-x) <= MIN_TOLERANCE)
-            {
-                Serial.println("\r\nfound setting, measured=" + String(abs(cur-x)) +  " wiper=" + String(i) + "\r\n");
-                break;
+            if (status == 0){
+                if (abs(cur-x) <= MIN_CURR_TOLERANCE){
+                    Serial.println("\r\nfound setting, measured=" + String(abs(cur-x)) +  "miliAmps; wiper=" + String(i) + "\r\n");
+                    break;
+                }
             }
             
             delay(250);
@@ -107,9 +111,32 @@ void loop(){
         
             
         }
+        break;
+    
+    case 4: //set and keep voltage
+        vol = (float) cons->getDouble("voltage (V): ");
+        setWiper(DEFAULT_POT_WIPER, 0); //START AT MIN VAL
+        Serial.println("\r\n");
+        for (int i = 0; i < 256; i++){
+            Serial.println("Trying wiper("+String(DEFAULT_POT_WIPER)+")=" + String(i) + "\r");
+            float x = 0;
+            status = setWiper(DEFAULT_POT_WIPER, i);
+            x = getLoadV();
 
-
+            if (status == 0){
+                if (abs(vol-x) <= MIN_VOLT_TOLERANCE){
+                    Serial.println("\r\nfound setting, measured=" + String(abs(vol-x)) +  " volts; wiper=" + String(i) + "\r\n");
+                    break;
+                }
+            }
+            
+            delay(250);
+            //break out of this thing and return to menu if anything is sent over serial
+            if(Serial.available() > 0)
+                return;
         
+            
+        }
         break;
     default:
         Serial.println("\r\n");
@@ -118,7 +145,7 @@ void loop(){
 
 }
 
-void setWiper(uint8_t wiper, uint8_t val){
+int setWiper(uint8_t wiper, uint8_t val){
     int status = 0;
     
     Wire.beginTransmission(AD5144_I2C_ADDR); 
@@ -129,6 +156,8 @@ void setWiper(uint8_t wiper, uint8_t val){
     status = Wire.endTransmission();
     if(status != 0)
         Serial.println("\r\nError, couldn't communicate with AD5144 chip over i2c status=" + String(status) + "\r\n");
+
+    return status;
     
 }
 
