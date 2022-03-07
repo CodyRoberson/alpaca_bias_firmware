@@ -8,7 +8,7 @@
  * @copyright Copyright (c) 2022 Arizona State University
  * 
  * REVISIONS:
- *  2022-03-05
+ *  2022-03-07
  *      FILE CREATED
  */
 
@@ -27,11 +27,13 @@ TuiConsole *cons;
 
 #define AD5144_I2C_ADDR 0b0101111 //ADDR 0 -> GND   ADDR 1 -> GND (AAD5144 DATASHEET)
 #define AD5144_CMD_WRITE_RDAC 0b00010000 //offset +1 for each RDAC register
+#define DEFAULT_POT_WIPER 1
+#define MIN_TOLERANCE 10.0 //minimum acceptable difference between desired and realized bias current
 
 void setWiper(uint8_t wiper, uint8_t val);
 void printCV();
 float getLoadV();
-float getLoadV();
+float getCurrent();
 
 void setup(){
     cons = new TuiConsole(&Serial, 9600); //Setup Serial Console
@@ -49,9 +51,11 @@ void setup(){
 }
 
 void loop(){
+    Serial.println("(built: " + String(__DATE__) + "_" + String(__TIME__) + " )");
     Serial.println("Select Option:\n1. Read Voltage(V),Current(mA)\n2. Set Wiper\n3. Set Current");
-    int cmd = cons->getInt("option->");
+    int cmd = cons->getInt("option: ");
     int wiper = 0, wiperval = 0;
+    float cur; //desired current
 
     switch (cmd)
     {
@@ -73,9 +77,38 @@ void loop(){
          * This will probably have to be it's own loop until broken out by user input
          *  current seaking algorithm....
          *  Basically need to set a wiper value, check the current and adjust accordingly
+         *  S1, should set wiper to _, to represent the minumum current
+         *  S2. climb up/down the wiper value until we are within some tolerance of the desired 'Current' value
+         *  S3. break out
          * 
          */
-        Serial.println("Not Implemented");
+        cur = (float) cons->getDouble("current (mA): ");
+        setWiper(DEFAULT_POT_WIPER, 0); //START AT MIN VAL
+
+        for (int i = 0; i < 256; i++){
+            float x = 0;
+            setWiper(DEFAULT_POT_WIPER, i);
+            x = getCurrent();
+
+            if (abs(cur-x) <= MIN_TOLERANCE)
+            {
+                Serial.println("found setting, wiper=" + String(i));
+                break;
+            }
+            
+            delay(250);
+            //break out of this thing and return to menu if anything is sent over serial
+            while (Serial.available() > 0) 
+            {
+                Serial.read();
+                return; 
+            }
+            
+            
+        }
+
+
+        
         break;
     default:
         Serial.println("Invalud CMD");
