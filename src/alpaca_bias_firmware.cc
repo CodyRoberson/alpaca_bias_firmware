@@ -30,6 +30,8 @@ TuiConsole *cons;
 
 void setWiper(uint8_t wiper, uint8_t val);
 void printCV();
+float getLoadV();
+float getLoadV();
 
 void setup(){
     cons = new TuiConsole(&Serial, 9600); //Setup Serial Console
@@ -47,16 +49,33 @@ void setup(){
 }
 
 void loop(){
-    Serial.println("Select Option:\n1. Read Voltage(V),Current(mA)\n2. Set Current");
+    Serial.println("Select Option:\n1. Read Voltage(V),Current(mA)\n2. Set Wiper\n3. Set Current");
     int cmd = cons->getInt("option->");
+    int wiper = 0, wiperval = 0;
 
     switch (cmd)
     {
-    case 1:
+    case 1: // REad out Voltage, current
         printCV();
         break;
-    case 2:
-        //TODO: implement this
+    case 2: // set resistance on POT
+        wiper = (uint8_t) cons->getInt("wiper (1-4): ");
+        if (wiper < 1 || wiper > 4){
+            Serial.println("Invalid Wiper pick 1 - 4");
+            return;
+        }
+        wiperval = (uint8_t) cons->getInt("Value (0-255): ");
+        setWiper(wiper-1, wiperval);
+        
+        break;
+    case 3: //set and keep current. 
+        /**
+         * This will probably have to be it's own loop until broken out by user input
+         *  current seaking algorithm....
+         *  Basically need to set a wiper value, check the current and adjust accordingly
+         * 
+         */
+        Serial.println("Not Implemented");
         break;
     default:
         Serial.println("Invalud CMD");
@@ -67,12 +86,11 @@ void loop(){
 
 void setWiper(uint8_t wiper, uint8_t val){
     int status = 0;
-    assert(wiper < 4); //should never be programmed past 3 (for RDAC4)
     
     Wire.beginTransmission(AD5144_I2C_ADDR); 
 
     Wire.write(AD5144_CMD_WRITE_RDAC + wiper); //Write to wiper/RDAC1
-    Wire.write(val); //whatever 1111_1111 means to the chip
+    Wire.write(val); //write value to chip
     
     status = Wire.endTransmission();
     if(status != 0)
@@ -80,17 +98,24 @@ void setWiper(uint8_t wiper, uint8_t val){
     
 }
 
-// Print voltage,current
-void printCV(){
-    float shuntvoltage = 0,
-        busvoltage = 0,
-        current_mA = 0,
-        loadvoltage = 0;
-    
-    shuntvoltage = ina219.getShuntVoltage_mV() + 0.26;
-    busvoltage = ina219.getBusVoltage_V();
-    current_mA = ina219.getCurrent_mA();
-    loadvoltage = (busvoltage + (shuntvoltage / 1000));
 
-    Serial.println(String(loadvoltage) + "," + String(current_mA));
+
+float getCurrent(){
+    return ina219.getCurrent_mA();
+}
+
+float getLoadV(){
+    float shuntvoltage = 0,
+    busvoltage = 0,
+    loadvoltage = 0;
+
+    shuntvoltage = ina219.getShuntVoltage_mV();
+    busvoltage = ina219.getBusVoltage_V();
+    loadvoltage = (busvoltage + (shuntvoltage / 1000));
+    return loadvoltage;
+}
+
+// Print voltage,current in volts,miliAmp\n format
+void printCV(){
+    Serial.println(String(getLoadV()) + "," + String(getCurrent()));
 }
