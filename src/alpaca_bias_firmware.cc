@@ -29,8 +29,8 @@ TuiConsole *cons;
 #define AD5144_CMD_WRITE_RDAC 0b00010000 //offset +1 for each RDAC register
 #define DEFAULT_POT_WIPER 1
 
-#define MIN_CURR_TOLERANCE 10.0 //minimum acceptable difference between desired and realized bias current
-#define MIN_VOLT_TOLERANCE 10.0 //minimum acceptable difference between desired and realized bias current
+#define MIN_CURR_TOLERANCE 0.05 //minimum acceptable difference between desired and realized bias current
+#define MIN_VOLT_TOLERANCE 0.01 //minimum acceptable difference between desired and realized bias current
 
 
 int setWiper(uint8_t wiper, uint8_t val);
@@ -51,6 +51,8 @@ void setup(){
 
     Wire.begin(); //start I2C bus
     ina219.begin(); //Default current/voltage sensor init
+    
+    setWiper(DEFAULT_POT_WIPER, 0);
 }
 
 void loop(){
@@ -58,7 +60,7 @@ void loop(){
         Serial.read();
     
     Serial.println("(built: " + String(__DATE__) + "_" + String(__TIME__) + " )\r");
-    Serial.println("Select Option:\r\n1. Read Voltage(V),Current(mA)\r\n2. Set Wiper\r\n3. Set Current\r\n4. Set Voltage");
+    Serial.println("Select Option:\r\n1. Read Voltage(V),Current(mA)\r\n2. Set Current\r\n3. Set Voltage");
     int cmd = cons->getInt("\r\noption: ");
     int wiper = 0, wiperval = 0, status = -1;
     float cur = 0, vol = 0; //desired current
@@ -68,17 +70,7 @@ void loop(){
     case 1: // REad out Voltage, current
         printCV();
         break;
-    case 2: // set resistance on POT
-        wiper = (uint8_t) cons->getInt("wiper (1-4): ");
-        if (wiper < 1 || wiper > 4){
-            Serial.println("Invalid Wiper pick 1 - 4\r\n");
-            return;
-        }
-        wiperval = (uint8_t) cons->getInt("Value (0-255): ");
-        setWiper(wiper-1, wiperval);
-        
-        break;
-    case 3: //set and keep current. 
+    case 2: //set and keep current. 
         /**
          * This will probably have to be it's own loop until broken out by user input
          *  current seaking algorithm....
@@ -92,19 +84,19 @@ void loop(){
         setWiper(DEFAULT_POT_WIPER, 0); //START AT MIN VAL
         Serial.println("\r\n");
         for (int i = 0; i < 256; i++){
-            Serial.println("Trying wiper("+String(DEFAULT_POT_WIPER)+")=" + String(i) + "\r");
             float x = 0;
             status = setWiper(DEFAULT_POT_WIPER, i);
             x = getCurrent();
 
             if (status == 0){
+                Serial.println("I=" + String(x) +"\r");
                 if (abs(cur-x) <= MIN_CURR_TOLERANCE){
-                    Serial.println("\r\nfound setting, measured=" + String(abs(cur-x)) +  "miliAmps; wiper=" + String(i) + "\r\n");
+                    Serial.println("\r\nfound setting, diff=" + String(abs(cur-x)) + "mA measured=" + String(x) +  " mA; wiper=" + String(i) + "\r\n");
                     break;
                 }
             }
             
-            delay(250);
+            delay(100);
             //break out of this thing and return to menu if anything is sent over serial
             if(Serial.available() > 0)
                 return;
@@ -113,24 +105,24 @@ void loop(){
         }
         break;
     
-    case 4: //set and keep voltage
+    case 3: //set and keep voltage
         vol = (float) cons->getDouble("voltage (V): ");
         setWiper(DEFAULT_POT_WIPER, 0); //START AT MIN VAL
         Serial.println("\r\n");
         for (int i = 0; i < 256; i++){
-            Serial.println("Trying wiper("+String(DEFAULT_POT_WIPER)+")=" + String(i) + "\r");
             float x = 0;
             status = setWiper(DEFAULT_POT_WIPER, i);
             x = getLoadV();
 
             if (status == 0){
+                Serial.println("V=" + String(x) +"\r");
                 if (abs(vol-x) <= MIN_VOLT_TOLERANCE){
-                    Serial.println("\r\nfound setting, measured=" + String(abs(vol-x)) +  " volts; wiper=" + String(i) + "\r\n");
+                    Serial.println("\r\nfound setting, diff=" + String(abs(vol-x)) + "V measured=" + String(x) +  " V; wiper=" + String(i) + "\r\n");
                     break;
                 }
             }
             
-            delay(250);
+            delay(100);
             //break out of this thing and return to menu if anything is sent over serial
             if(Serial.available() > 0)
                 return;
