@@ -4,4 +4,4 @@ Bias Board Control Software for the ALPACA project. Designed for the Arduino Fra
 
 [Download Arduino IDE Sketch Here](https://github.com/CodyRoberson/alpaca_bias_firmware/releases/download/0.0.5/alpaca_bias_firmware.zip)
 
-[Download Pre-Compiled Bin File Here](https://github.com/CodyRoberson/alpaca_bias_firmware/releases/download/0.0.4/firmware.bin)
+[Download Pre-Compiled Bin File Here](https://github.com/CodyRoberson/alpaca_bias_firmware/releases/download/0.0.5/firmware.bin)
