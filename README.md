@@ -8,4 +8,7 @@ Bias Board Control Software for the ALPACA project. Designed for the Arduino Fra
 
 You will need [bossa](https://www.shumatech.com/web/products/bossa) to upload precompiled firmware.
 
-***Ensure the flash offset is set to 0x2000 or you will brick the Microcontroller's bootloader.***
+```diff
+- Ensure the flash offset is set to 0x2000 or you will brick the Microcontroller's bootloader.
+```
+
